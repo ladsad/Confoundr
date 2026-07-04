@@ -1,4 +1,12 @@
 documentation/confoundr_project_plan.md
-Documentation/roadmap.md
-Documentation/timeline_and_issues.md
-Documentation/educational_guide.md
+documentation/roadmap.md
+documentation/timeline_and_issues.md
+documentation/educational_guide.md
+
+# Python
+dist/
+build/
+*.egg-info/
+__pycache__/
+*.pyc
+venv/
