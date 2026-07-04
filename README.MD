@@ -15,5 +15,4 @@ Confoundr is built as a two-layer system:
 ## Quick Links
 - [Architecture](Documentation/architecture.md)
 - [Check Catalog](Documentation/checks_catalog.md)
-- [Roadmap](Documentation/roadmap.md)
 - [Project Plan](Documentation/confoundr_project_plan.md)
