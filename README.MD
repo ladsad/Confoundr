@@ -19,3 +19,42 @@ Confoundr is built as a two-layer system:
 
 - [Architecture](Documentation/architecture.md)
 - [Check Catalog](Documentation/checks_catalog.md)
+
+## Quick Start
+
+### Installation
+```bash
+pip install confoundr
+```
+
+### Example Usage (CLI)
+You can run Confoundr directly on a CSV dataset using the CLI:
+
+```bash
+$ confoundr check dataset.csv --target target_col --treatment treatment_col
+
+--- Confoundr Diagnostics ---
+========================================
+[FAIL] Target Leakage Detector
+   Found 1 features with suspiciously high correlation (> 0.9) to the target 'target_col', which may indicate target leakage. Leaky features: target_proxy (0.9979)
+
+[PASS] Confounder Audit
+   No strong measured confounders found (threshold > 0.2).
+
+[WARN] Positivity (Overlap) Check
+   Severe positivity violation. The propensity score distributions for treated and control groups have virtually no overlap (overlap ratio: 1.20%).
+```
+
+### Example Usage (Python)
+```python
+import pandas as pd
+from confoundr import CheckContext
+from confoundr.checks import TargetLeakageCheck, PositivityCheck
+
+df = pd.read_csv("dataset.csv")
+context = CheckContext(df=df, target_col="target", treatment_col="treatment")
+
+# Run individual checks
+leakage_result = TargetLeakageCheck().run(context)
+print(leakage_result.status, leakage_result.explanation)
+```
