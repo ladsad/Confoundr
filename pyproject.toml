@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "confoundr"
+version = "0.1.0"
+description = "A causal validity linter for ML pipelines"
+readme = "README.MD"
+requires-python = ">=3.9"
+dependencies = [
+    "pandas>=2.0.0",
+    "numpy>=1.21.0",
+    "scikit-learn>=1.0.0",
+    "statsmodels>=0.13.0"
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[tool.setuptools.packages.find]
+include = ["confoundr*"]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "black>=22.0",
+    "isort>=5.0",
+    "flake8>=4.0",
+]

@@ -1,0 +1,39 @@
+Metadata-Version: 2.4
+Name: confoundr
+Version: 0.1.0
+Summary: A causal validity linter for ML pipelines
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: pandas>=2.0.0
+Requires-Dist: numpy>=1.21.0
+Requires-Dist: scikit-learn>=1.0.0
+Requires-Dist: statsmodels>=0.13.0
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0.0; extra == "dev"
+Requires-Dist: black>=22.0; extra == "dev"
+Requires-Dist: isort>=5.0; extra == "dev"
+Requires-Dist: flake8>=4.0; extra == "dev"
+Dynamic: license-file
+
+# Confoundr
+
+*A causal validity linter for ML pipelines, plus a deployed platform that runs it as a service*
+
+## Overview
+Data quality tools (Great Expectations, Evidently AI, Feast validations) check whether your data is *clean* (nulls, schema drift, distribution shift). They do not check whether your data is *causally valid* — whether the assumptions your causal or treatment-effect model depends on (no leakage, no unmeasured confounding, positivity, balanced treatment groups) actually hold. 
+
+Confoundr is an open-source library that runs a battery of causal-validity checks against a dataframe, feature store, or pipeline stage, explains failures in plain language, and — as a hosted platform — lets a team plug in a dataset and get those diagnostics without writing any code, on a schedule, with alerts.
+
+## Architecture Highlights
+Confoundr is built as a two-layer system:
+- **Core Library (`confoundr` pip package)**: Standalone, dependency-light, usable in anyone's pipeline or CI. 
+- **Deployed Platform**: A multi-tenant service wrapping the core library that runs asynchronous checks on uploaded datasets, with observability and an AI explainer layer.
+
+## Quick Links
+- [Architecture](Documentation/architecture.md)
+- [Check Catalog](Documentation/checks_catalog.md)
+- [Project Plan](Documentation/confoundr_project_plan.md)
