@@ -13,15 +13,27 @@ from confoundr.checks.leakage import TargetLeakageCheck
 from confoundr.checks.confounder import ConfounderAuditCheck
 from confoundr.checks.positivity import PositivityCheck
 from .jobs import run_causal_checks
+import subprocess
+import sys
+from contextlib import asynccontextmanager
 
 redis_url = os.getenv('REDIS_URL', 'redis://localhost:6379')
 redis_conn = Redis.from_url(redis_url)
 job_queue = Queue(connection=redis_conn)
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Start the worker process in the background when the API starts
+    worker_process = subprocess.Popen([sys.executable, "-m", "api.worker"])
+    yield
+    # Terminate the worker when the API shuts down
+    worker_process.terminate()
+
 app = FastAPI(
     title="Confoundr API",
     description="API for Confoundr Causal Validity Checks (Sync + Async)",
     version="0.2.0",
+    lifespan=lifespan
 )
 
 @app.get("/health")
