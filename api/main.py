@@ -103,15 +103,16 @@ async def run_checks_async(
     contents = await file.read()
     
     # Enqueue the background job
-    job = job_queue.enqueue(
-        run_causal_checks,
-        contents,
-        filename,
-        target_col,
-        treatment_col,
-        job_timeout='10m',
-        result_ttl=86400 # keep result for 24h
-    )
+    try:
+        job = job_queue.enqueue(
+            run_causal_checks,
+            args=(contents, filename, target_col, treatment_col),
+            job_timeout=600,
+            result_ttl=86400
+        )
+    except Exception as e:
+        import traceback
+        raise HTTPException(status_code=500, detail=f"Enqueue failed: {str(e)} - {traceback.format_exc()}")
     
     return JSONResponse(status_code=202, content={
         "message": "Job accepted for processing.",
