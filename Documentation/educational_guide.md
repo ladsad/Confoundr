@@ -74,3 +74,13 @@ In causal inference, the **Positivity Assumption** (also known as the overlap as
 * **Data Privacy & Schema Design:** Causal inference is heavily used in healthcare and finance. For security and compliance, the database schema (`JobHistory`) explicitly **does not store the raw datasets**. It only stores metadata (job IDs, execution times) and the final serialized JSON `CheckResult` outputs.
 * **SQLAlchemy ORM & Database Agnosticism:** By using SQLAlchemy (`Base.metadata.create_all()`), the application is completely decoupled from the database dialect. During local development, it defaults to `sqlite:///./confoundr.db`, but automatically switches to `postgresql://` when deployed to Render without changing a single line of business logic.
 * **Writing Job Results from the Worker:** Rather than the API polling the worker and writing to the database, the Worker process itself is responsible for committing the `JobHistory` record to Postgres immediately after processing finishes. This guarantees that results are permanently archived even if the user never calls the `GET /api/v1/job/{job_id}` polling endpoint.
+
+## 10. Key Learnings from Phase 5 (Observability)
+
+* **Decoupling Metrics Generation from Visualization:** Best-practice observability relies on the API simply emitting its state (via `/metrics`) using standard formats (like `prometheus-client`), rather than the API trying to store and render its own charts. This allows external tools like Grafana Cloud to handle the heavy lifting of time-series storage and visualization.
+* **Aggregating Distributed Metrics:** Because the Web API and the Background Worker run as separate processes, the API cannot read the worker's internal memory. To generate accurate metrics (like total failed jobs or average execution time), the `/metrics` endpoint dynamically queries the central Postgres database and Redis queues to calculate real-time gauges at the exact moment it is scraped.
+
+## 11. Key Learnings from Phase 6 (Agent Explainer Layer)
+
+* **Bridging Technical Errors to Human Understanding:** Causal inference produces highly technical outputs (e.g., "target proxy highly correlated > 0.9"). By passing these structured failure JSONs into an LLM (`llama-3.1-8b-instant`), we transform abstract statistical failures into actionable, plain-language dataset fixes for the end user.
+* **Synchronous AI Integration in Async Workers:** The LLM call is intentionally placed inside the Background Worker, rather than the HTTP API. This ensures that slow LLM response times (which can take several seconds) never block the main web thread, perfectly adhering to the async architecture we established in Phase 3.

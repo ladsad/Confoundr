@@ -107,6 +107,36 @@
 
 ---
 
+## Phase 5: Observability
+
+**Objective:** Instrument the application with Prometheus metrics to track queue health, job success/failure rates, and execution latencies, enabling external monitoring via Grafana.
+
+### Work Completed
+
+1. **Metrics Instrumentation (`api/main.py`)**
+   - Added `prometheus-client` dependency.
+   - Built a `/metrics` endpoint that queries Redis for real-time queue depth and Postgres for historical job statistics.
+   - Deployed seamlessly to Render, making metrics available for scraping by external cloud providers (e.g., Grafana Cloud).
+2. **Local Observability Stack (`docker-compose.yml`)**
+   - Expanded the local development environment to spin up Prometheus and Grafana instances alongside the core services for instantaneous local testing and dashboard prototyping.
+
+---
+
+## Phase 6: Agent Explainer Layer
+
+**Objective:** Wire failed causal checks into a Large Language Model to generate plain-language explanations and dataset fix suggestions for users.
+
+### Work Completed
+
+1. **LLM Integration (`api/llm.py`)**
+   - Added the `groq` SDK and configured it to securely authenticate using `GROQ_API_KEY`.
+   - Wrote a zero-shot prompt template for `llama-3.1-8b-instant` that positions the AI as an expert causal inference statistician, instructing it to provide concise, actionable insights based on the technical failure explanation and statistical evidence.
+2. **Worker Interception (`api/jobs.py`)**
+   - Intercepted any causal check resulting in a `"fail"` status inside the background worker.
+   - Piped the failure details synchronously to the Groq API and attached the generated `ai_insight` to the final `CheckResult` JSON payload stored in Postgres.
+
+---
+
 ## Issue Log
 
 ### Issue 1: PowerShell Execution Policy Restrictions
@@ -143,3 +173,8 @@
 
 - **Problem:** The background worker crashed on startup with `ImportError: cannot import name 'Connection' from 'rq'`. Recent `rq` releases (v2.x) entirely removed the legacy `Connection` context manager.
 - **Resolution:** Refactored `api/worker.py` to remove the context manager and explicitly pass the Redis connection string directly to the Worker constructor (`Worker(['default'], connection=conn)`).
+
+### Issue 8: Groq Model Deprecation & 400 Errors
+
+- **Problem:** When testing the Phase 6 Agent Explainer, the Groq API returned a 400 Bad Request error stating that the `llama3-8b-8192` model had been decommissioned and was no longer supported.
+- **Resolution:** Updated `api/llm.py` to target Groq's newer, actively supported `llama-3.1-8b-instant` model, restoring AI insight generation.

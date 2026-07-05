@@ -58,3 +58,12 @@ context = CheckContext(df=df, target_col="target", treatment_col="treatment")
 leakage_result = TargetLeakageCheck().run(context)
 print(leakage_result.status, leakage_result.explanation)
 ```
+
+## Hosted Platform API
+
+Confoundr includes an out-of-the-box cloud deployment wrapper (via FastAPI, Redis Queue, PostgreSQL, and Groq).
+
+- **Async Processing:** Submit datasets to `/api/v1/async-check`. The heavy statistical processing is handed off to a background Redis worker.
+- **AI Explainer Layer:** If a causal check fails, the worker seamlessly triggers a Groq LLM (Llama 3.1) to generate a plain-language explanation and dataset fix.
+- **Persistent History:** Every job and its corresponding AI insight is archived in PostgreSQL. View past runs at `/api/v1/history`.
+- **Observability:** Production-ready metrics (queue depth, job outcomes, execution time) are natively exposed on the `/metrics` endpoint for Prometheus and Grafana.
