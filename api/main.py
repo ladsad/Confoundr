@@ -24,14 +24,20 @@ async def run_checks(
     target_col: str = Form(...),
     treatment_col: str = Form(None),
 ):
-    if not file.filename.endswith('.csv'):
-        raise HTTPException(status_code=400, detail="Only CSV files are supported.")
+    filename = file.filename.lower()
+    if not (filename.endswith('.csv') or filename.endswith('.parquet') or filename.endswith('.json')):
+        raise HTTPException(status_code=400, detail="Only CSV, Parquet, and JSON files are supported.")
         
     try:
         contents = await file.read()
-        df = pd.read_csv(io.BytesIO(contents))
+        if filename.endswith('.csv'):
+            df = pd.read_csv(io.BytesIO(contents))
+        elif filename.endswith('.parquet'):
+            df = pd.read_parquet(io.BytesIO(contents))
+        elif filename.endswith('.json'):
+            df = pd.read_json(io.BytesIO(contents))
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Failed to parse CSV: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Failed to parse file: {str(e)}")
         
     if target_col not in df.columns:
         raise HTTPException(status_code=400, detail=f"Target column '{target_col}' not found in the dataset.")
