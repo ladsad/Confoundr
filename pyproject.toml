@@ -36,6 +36,7 @@ api = [
     "redis>=5.0.0",
     "sqlalchemy>=2.0.0",
     "psycopg2-binary>=2.9.0",
+    "prometheus-client>=0.17.0",
 ]
 dev = [
     "pytest>=7.0.0",

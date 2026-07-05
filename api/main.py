@@ -8,6 +8,9 @@ from rq import Queue
 from redis import Redis
 from rq.job import Job
 from sqlalchemy.orm import Session
+from sqlalchemy import func
+from prometheus_client import Gauge, Counter, generate_latest, CONTENT_TYPE_LATEST
+from fastapi.responses import Response
 
 from confoundr.schemas import CheckContext, CheckStatus
 from confoundr.checks.leakage import TargetLeakageCheck
@@ -46,6 +49,31 @@ app = FastAPI(
 @app.get("/health")
 def health_check():
     return {"status": "ok"}
+
+# Prometheus Metrics
+QUEUE_DEPTH = Gauge('confoundr_queue_depth', 'Number of jobs currently waiting in the queue')
+JOB_SUCCESS_COUNT = Gauge('confoundr_jobs_success_total', 'Total number of successfully finished jobs')
+JOB_FAIL_COUNT = Gauge('confoundr_jobs_failed_total', 'Total number of failed jobs')
+AVG_EXEC_TIME = Gauge('confoundr_avg_execution_time_seconds', 'Average execution time of jobs')
+
+@app.get("/metrics")
+def get_metrics(db: Session = Depends(get_db)):
+    """Expose Prometheus metrics for observability."""
+    # 1. Get queue depth directly from Redis/RQ
+    QUEUE_DEPTH.set(len(job_queue))
+    
+    # 2. Get historical stats from Postgres
+    successes = db.query(JobHistory).filter(JobHistory.status == 'finished').count()
+    failures = db.query(JobHistory).filter(JobHistory.status == 'failed').count()
+    
+    avg_time = db.query(func.avg(JobHistory.execution_time_seconds)).filter(JobHistory.status == 'finished').scalar()
+    
+    JOB_SUCCESS_COUNT.set(successes)
+    JOB_FAIL_COUNT.set(failures)
+    if avg_time:
+        AVG_EXEC_TIME.set(float(avg_time))
+        
+    return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 @app.get("/api/v1/history")
 def get_history(limit: int = 10, db: Session = Depends(get_db)):
