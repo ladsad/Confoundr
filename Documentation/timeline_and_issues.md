@@ -123,3 +123,23 @@
 
 - **Problem:** Running the CLI generated a `UnicodeEncodeError: 'charmap' codec can't encode character` when attempting to print emojis (like 🔍 or ✅) because the default Windows console (cp1252) does not fully support modern Unicode.
 - **Resolution:** Replaced emojis in `cli.py` with standard text brackets (e.g., `[PASS]`, `[FAIL]`, `[WARN]`) to ensure flawless cross-platform terminal compatibility without forcing users to reconfigure their terminal encodings.
+
+### Issue 4: Render Blueprint Sync & Env Var Injection Delays
+
+- **Problem:** After adding `confoundr-redis` to the `render.yaml` Blueprint, the async endpoint instantly threw a `ConnectionRefusedError: Error 111 connecting to localhost:6379`. The web service had failed to pick up the newly provisioned `REDIS_URL` environment variable.
+- **Resolution:** Manually forced a **"Clear build cache & deploy"** on the Web Service in the Render Dashboard. This forced the container to restart and successfully ingest the new environment variables from the Blueprint infrastructure manager.
+
+### Issue 5: Render Free Tier Worker Restrictions & Port Binding Timeouts
+
+- **Problem:** Render rejected the `type: worker` service because background workers are not supported on the free tier. When we attempted to bypass this by running `python -m api.worker & uvicorn ...` in a single Web Service container via bash, the worker hijacked PID 1. This prevented Uvicorn from starting, which caused Render's health checks to fail (`Port scan timeout reached, no open ports detected`).
+- **Resolution:** Abandoned the shell hack and adopted a programmatic approach. Used FastAPI's `@asynccontextmanager lifespan` event to spawn the worker via `subprocess.Popen` precisely when the application starts, allowing both Uvicorn (on port 10000) and the RQ Worker to run perfectly inside a single free-tier container.
+
+### Issue 6: Render Database `ipAllowList` Validation
+
+- **Problem:** Blueprint syncing failed with the error `services[2] must specify IP allow list`. Render's updated security protocols now strictly require an explicit IP allow list for all Data Stores, even if they are only accessed internally.
+- **Resolution:** Appended `ipAllowList: - source: 0.0.0.0/0` to both the Redis and PostgreSQL service definitions in `render.yaml`.
+
+### Issue 7: RQ (Redis Queue) `Connection` Import Error
+
+- **Problem:** The background worker crashed on startup with `ImportError: cannot import name 'Connection' from 'rq'`. Recent `rq` releases (v2.x) entirely removed the legacy `Connection` context manager.
+- **Resolution:** Refactored `api/worker.py` to remove the context manager and explicitly pass the Redis connection string directly to the Worker constructor (`Worker(['default'], connection=conn)`).
