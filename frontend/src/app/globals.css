@@ -43,6 +43,15 @@ a {
   text-decoration: none;
 }
 
+.nav-link {
+  color: var(--text-muted);
+  transition: color 0.2s ease;
+}
+
+.nav-link:hover {
+  color: var(--text-main);
+}
+
 /* Typography Enhancements */
 .gradient-text {
   background: linear-gradient(135deg, #a5b4fc, #c4b5fd);

@@ -21,8 +21,8 @@ export default function RootLayout({
               <span style={{ fontFamily: 'Outfit', fontSize: '1.5rem', fontWeight: 600 }}>Confoundr</span>
             </a>
             <div style={{ display: 'flex', gap: '24px' }}>
-              <a href="/" style={{ color: 'var(--text-muted)', transition: 'color 0.2s' }} onMouseOver={(e) => e.currentTarget.style.color = 'var(--text-main)'} onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-muted)'}>Dashboard</a>
-              <a href={process.env.NEXT_PUBLIC_API_URL + '/metrics'} target="_blank" rel="noreferrer" style={{ color: 'var(--text-muted)', transition: 'color 0.2s' }} onMouseOver={(e) => e.currentTarget.style.color = 'var(--text-main)'} onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-muted)'}>Metrics</a>
+              <a href="/" className="nav-link">Dashboard</a>
+              <a href={process.env.NEXT_PUBLIC_API_URL + '/metrics'} target="_blank" rel="noreferrer" className="nav-link">Metrics</a>
             </div>
           </div>
         </nav>
