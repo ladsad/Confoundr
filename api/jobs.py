@@ -1,6 +1,12 @@
 import pandas as pd
 import io
 import time
+import sys
+
+try:
+    import resource
+except ImportError:
+    resource = None
 from rq import get_current_job
 
 from confoundr.schemas import CheckContext, CheckStatus
@@ -16,6 +22,15 @@ def run_causal_checks(file_bytes: bytes, filename: str, target_col: str, treatme
     """
     Background job to run all causal validity checks on a dataset.
     """
+    if resource:
+        try:
+            # Hard limit: 500 MB RAM and 300 CPU seconds per job to prevent DoS via malicious datasets
+            max_mem = 500 * 1024 * 1024
+            resource.setrlimit(resource.RLIMIT_AS, (max_mem, max_mem))
+            resource.setrlimit(resource.RLIMIT_CPU, (300, 300))
+        except ValueError:
+            pass # Ignore if limits are already lower
+
     start_time = time.time()
     try:
         if filename.endswith('.csv'):

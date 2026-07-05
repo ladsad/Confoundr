@@ -99,6 +99,9 @@ async def run_checks(
     target_col: str = Form(...),
     treatment_col: str = Form(None),
 ):
+    if file.size and file.size > 50 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="File too large. Maximum size is 50MB.")
+        
     filename = file.filename.lower()
     if not (filename.endswith('.csv') or filename.endswith('.parquet') or filename.endswith('.json')):
         raise HTTPException(status_code=400, detail="Only CSV, Parquet, and JSON files are supported.")
@@ -161,6 +164,9 @@ async def run_checks_async(
     target_col: str = Form(...),
     treatment_col: str = Form(None),
 ):
+    if file.size and file.size > 50 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="File too large. Maximum size is 50MB.")
+        
     filename = file.filename.lower()
     if not (filename.endswith('.csv') or filename.endswith('.parquet') or filename.endswith('.json')):
         raise HTTPException(status_code=400, detail="Only CSV, Parquet, and JSON files are supported.")
@@ -172,7 +178,7 @@ async def run_checks_async(
         job = job_queue.enqueue(
             run_causal_checks,
             args=(contents, filename, target_col, treatment_col),
-            job_timeout=600,
+            job_timeout=300, # Strict 5-minute timeout for security
             result_ttl=86400
         )
     except Exception as e:
