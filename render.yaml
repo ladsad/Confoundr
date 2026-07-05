@@ -30,3 +30,6 @@ services:
     name: confoundr-redis
     region: ohio
     plan: free
+    ipAllowList:
+      - source: 0.0.0.0/0
+        description: Allow all for internal connections
