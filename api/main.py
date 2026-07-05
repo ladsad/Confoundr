@@ -39,11 +39,21 @@ async def lifespan(app: FastAPI):
     # Terminate the worker when the API shuts down
     worker_process.terminate()
 
+from fastapi.middleware.cors import CORSMiddleware
+
 app = FastAPI(
     title="Confoundr API",
     description="API for Confoundr Causal Validity Checks (Sync + Async)",
     version="0.2.0",
     lifespan=lifespan
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 @app.get("/health")
