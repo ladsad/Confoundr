@@ -3,15 +3,25 @@ from fastapi.responses import JSONResponse
 import pandas as pd
 import io
 
+import os
+from rq import Queue
+from redis import Redis
+from rq.job import Job
+
 from confoundr.schemas import CheckContext, CheckStatus
 from confoundr.checks.leakage import TargetLeakageCheck
 from confoundr.checks.confounder import ConfounderAuditCheck
 from confoundr.checks.positivity import PositivityCheck
+from .jobs import run_causal_checks
+
+redis_url = os.getenv('REDIS_URL', 'redis://localhost:6379')
+redis_conn = Redis.from_url(redis_url)
+job_queue = Queue(connection=redis_conn)
 
 app = FastAPI(
     title="Confoundr API",
-    description="Synchronous API MVP for Confoundr Causal Validity Checks",
-    version="0.1.0",
+    description="API for Confoundr Causal Validity Checks (Sync + Async)",
+    version="0.2.0",
 )
 
 @app.get("/health")
@@ -79,3 +89,55 @@ async def run_checks(
             })
             
     return JSONResponse(content={"results": results})
+
+@app.post("/api/v1/async-check")
+async def run_checks_async(
+    file: UploadFile = File(...),
+    target_col: str = Form(...),
+    treatment_col: str = Form(None),
+):
+    filename = file.filename.lower()
+    if not (filename.endswith('.csv') or filename.endswith('.parquet') or filename.endswith('.json')):
+        raise HTTPException(status_code=400, detail="Only CSV, Parquet, and JSON files are supported.")
+        
+    contents = await file.read()
+    
+    # Enqueue the background job
+    job = job_queue.enqueue(
+        run_causal_checks,
+        contents,
+        filename,
+        target_col,
+        treatment_col,
+        job_timeout='10m',
+        result_ttl=86400 # keep result for 24h
+    )
+    
+    return JSONResponse(status_code=202, content={
+        "message": "Job accepted for processing.",
+        "job_id": job.id,
+        "status": job.get_status()
+    })
+
+@app.get("/api/v1/job/{job_id}")
+def get_job_status(job_id: str):
+    try:
+        job = Job.fetch(job_id, connection=redis_conn)
+    except Exception:
+        raise HTTPException(status_code=404, detail="Job not found")
+        
+    response = {
+        "job_id": job.id,
+        "status": job.get_status(),
+        "created_at": job.created_at.isoformat() if job.created_at else None,
+        "enqueued_at": job.enqueued_at.isoformat() if job.enqueued_at else None,
+        "started_at": job.started_at.isoformat() if job.started_at else None,
+        "ended_at": job.ended_at.isoformat() if job.ended_at else None,
+    }
+    
+    if job.is_finished:
+        response["results"] = job.result
+    elif job.is_failed:
+        response["error"] = str(job.exc_info)
+        
+    return JSONResponse(content=response)

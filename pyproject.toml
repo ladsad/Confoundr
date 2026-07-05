@@ -32,6 +32,8 @@ api = [
     "uvicorn>=0.23.0",
     "python-multipart>=0.0.6",
     "pyarrow>=14.0.0",
+    "rq>=1.15.0",
+    "redis>=5.0.0",
 ]
 dev = [
     "pytest>=7.0.0",

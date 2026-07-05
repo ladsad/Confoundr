@@ -1,0 +1,64 @@
+import pandas as pd
+import io
+
+from confoundr.schemas import CheckContext, CheckStatus
+from confoundr.checks.leakage import TargetLeakageCheck
+from confoundr.checks.confounder import ConfounderAuditCheck
+from confoundr.checks.positivity import PositivityCheck
+
+def run_causal_checks(file_bytes: bytes, filename: str, target_col: str, treatment_col: str = None):
+    """
+    Background job to run all causal validity checks on a dataset.
+    """
+    try:
+        if filename.endswith('.csv'):
+            df = pd.read_csv(io.BytesIO(file_bytes))
+        elif filename.endswith('.parquet'):
+            df = pd.read_parquet(io.BytesIO(file_bytes))
+        elif filename.endswith('.json'):
+            df = pd.read_json(io.BytesIO(file_bytes))
+        else:
+            raise ValueError("Unsupported file format.")
+    except Exception as e:
+        raise ValueError(f"Failed to parse file: {str(e)}")
+        
+    if target_col not in df.columns:
+        raise ValueError(f"Target column '{target_col}' not found in the dataset.")
+        
+    context = CheckContext(
+        df=df,
+        target_col=target_col,
+        treatment_col=treatment_col
+    )
+    
+    checks = [
+        TargetLeakageCheck(),
+        ConfounderAuditCheck(),
+        PositivityCheck()
+    ]
+    
+    results = []
+    
+    for check in checks:
+        if check.name in ["Confounder Audit", "Positivity (Overlap) Check"] and not treatment_col:
+            continue
+            
+        try:
+            res = check.run(context)
+            results.append({
+                "check_name": res.check_name,
+                "status": res.status.value,
+                "severity": res.severity.value,
+                "explanation": res.explanation,
+                "evidence": res.evidence
+            })
+        except Exception as e:
+            results.append({
+                "check_name": check.name,
+                "status": CheckStatus.ERROR.value,
+                "severity": check.default_severity.value,
+                "explanation": f"Check failed to execute: {str(e)}",
+                "evidence": {}
+            })
+            
+    return results
