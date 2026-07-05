@@ -16,6 +16,8 @@ services:
         fromDatabase:
           name: confoundr-db
           property: connectionString
+      - key: GROQ_API_KEY
+        sync: false
 
   - type: redis
     name: confoundr-redis

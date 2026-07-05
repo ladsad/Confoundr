@@ -10,6 +10,7 @@ from confoundr.checks.positivity import PositivityCheck
 
 from .database import SessionLocal
 from .models import JobHistory
+from .llm import generate_explanation
 
 def run_causal_checks(file_bytes: bytes, filename: str, target_col: str, treatment_col: str = None):
     """
@@ -51,12 +52,18 @@ def run_causal_checks(file_bytes: bytes, filename: str, target_col: str, treatme
             
         try:
             res = check.run(context)
+            
+            ai_insight = None
+            if res.status.value == "fail":
+                ai_insight = generate_explanation(res.check_name, res.explanation, res.evidence)
+                
             results.append({
                 "check_name": res.check_name,
                 "status": res.status.value,
                 "severity": res.severity.value,
                 "explanation": res.explanation,
-                "evidence": res.evidence
+                "evidence": res.evidence,
+                "ai_insight": ai_insight
             })
         except Exception as e:
             results.append({
