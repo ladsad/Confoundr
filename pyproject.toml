@@ -34,6 +34,8 @@ api = [
     "pyarrow>=14.0.0",
     "rq>=1.15.0",
     "redis>=5.0.0",
+    "sqlalchemy>=2.0.0",
+    "psycopg2-binary>=2.9.0",
 ]
 dev = [
     "pytest>=7.0.0",

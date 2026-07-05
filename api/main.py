@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Depends
 from fastapi.responses import JSONResponse
 import pandas as pd
 import io
@@ -7,6 +7,7 @@ import os
 from rq import Queue
 from redis import Redis
 from rq.job import Job
+from sqlalchemy.orm import Session
 
 from confoundr.schemas import CheckContext, CheckStatus
 from confoundr.checks.leakage import TargetLeakageCheck
@@ -17,12 +18,18 @@ import subprocess
 import sys
 from contextlib import asynccontextmanager
 
+from .database import engine, get_db
+from .models import Base, JobHistory
+
 redis_url = os.getenv('REDIS_URL', 'redis://localhost:6379')
 redis_conn = Redis.from_url(redis_url)
 job_queue = Queue(connection=redis_conn)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Initialize the database schema
+    Base.metadata.create_all(bind=engine)
+    
     # Start the worker process in the background when the API starts
     worker_process = subprocess.Popen([sys.executable, "-m", "api.worker"])
     yield
@@ -39,6 +46,24 @@ app = FastAPI(
 @app.get("/health")
 def health_check():
     return {"status": "ok"}
+
+@app.get("/api/v1/history")
+def get_history(limit: int = 10, db: Session = Depends(get_db)):
+    """Retrieve the most recent job executions and their causal validity results."""
+    history = db.query(JobHistory).order_by(JobHistory.created_at.desc()).limit(limit).all()
+    
+    return JSONResponse(content={"history": [
+        {
+            "job_id": h.job_id,
+            "filename": h.filename,
+            "target_col": h.target_col,
+            "treatment_col": h.treatment_col,
+            "status": h.status,
+            "created_at": h.created_at.isoformat() if h.created_at else None,
+            "execution_time_seconds": h.execution_time_seconds,
+            "results": h.results
+        } for h in history
+    ]})
 
 @app.post("/api/v1/check")
 async def run_checks(

@@ -1,15 +1,21 @@
 import pandas as pd
 import io
+import time
+from rq import get_current_job
 
 from confoundr.schemas import CheckContext, CheckStatus
 from confoundr.checks.leakage import TargetLeakageCheck
 from confoundr.checks.confounder import ConfounderAuditCheck
 from confoundr.checks.positivity import PositivityCheck
 
+from .database import SessionLocal
+from .models import JobHistory
+
 def run_causal_checks(file_bytes: bytes, filename: str, target_col: str, treatment_col: str = None):
     """
     Background job to run all causal validity checks on a dataset.
     """
+    start_time = time.time()
     try:
         if filename.endswith('.csv'):
             df = pd.read_csv(io.BytesIO(file_bytes))
@@ -60,5 +66,28 @@ def run_causal_checks(file_bytes: bytes, filename: str, target_col: str, treatme
                 "explanation": f"Check failed to execute: {str(e)}",
                 "evidence": {}
             })
+            
+    # Save to database
+    end_time = time.time()
+    job = get_current_job()
+    if job:
+        db = SessionLocal()
+        try:
+            history_record = JobHistory(
+                job_id=job.id,
+                filename=filename,
+                target_col=target_col,
+                treatment_col=treatment_col,
+                status="finished",
+                execution_time_seconds=end_time - start_time,
+                results=results
+            )
+            db.add(history_record)
+            db.commit()
+        except Exception as e:
+            print(f"Failed to save job {job.id} to db: {e}")
+            db.rollback()
+        finally:
+            db.close()
             
     return results
