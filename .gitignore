@@ -1,7 +1,4 @@
-documentation/confoundr_project_plan.md
-documentation/roadmap.md
-documentation/timeline_and_issues.md
-documentation/educational_guide.md
+# Documentation removed from gitignore to track project history
 
 # Python
 dist/
